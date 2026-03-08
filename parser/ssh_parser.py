@@ -1,7 +1,11 @@
 from datetime import datetime
 import uuid
 
+
 def parse_ssh_failed(line: str):
+    """
+    Parse failed SSH authentication log lines into a normalized security event.
+    """
 
     if "Failed password for" not in line:
         return None
@@ -9,8 +13,8 @@ def parse_ssh_failed(line: str):
     parts = line.split()
 
     try:
-     
         user_index = parts.index("for") + 1
+
         if parts[user_index] == "invalid":
             user = parts[user_index + 2]   # invalid user <name>
         else:
@@ -24,7 +28,8 @@ def parse_ssh_failed(line: str):
 
     event = {
         "event_id": str(uuid.uuid4()),
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.utcnow().isoformat(timespec="seconds"),
+        "message": "SSH failed login detected",
         "source": {
             "type": "linux",
             "service": "ssh"

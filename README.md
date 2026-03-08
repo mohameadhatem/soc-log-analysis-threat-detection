@@ -1,7 +1,7 @@
 ---
 # 🔐 SOC Log Analysis & Threat Detection
 
-## 📌 Project Overvie
+## 📌 Project Overview
 A practical SOC learning project focused on **log analysis**, **threat detection**, and **security event modeling** using real system logs.
 
 This project simulates how SOC tools process authentication logs to detect malicious activity such as brute-force attacks.

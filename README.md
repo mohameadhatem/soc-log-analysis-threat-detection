@@ -225,34 +225,36 @@ Last Seen : 2026-03-09 01:02:39
 ---
 
 ## 📸 Detection Example
+
 ### Example Alert
+
+```
 [*] SSH SOC Detector is running...
 
 🚨 ALERT DETECTED
-Alert ID : 6125d77d-625a-448f-b9c7-924ab5d72499
+Alert ID  : 6125d77d-625a-448f-b9c7-924ab5d72499
 Alert Time: 2026-03-09 01:39:56
-Type : ssh_bruteforce
-Severity : low
-IP : ::1
-Attempts : 5
-Window : 60 seconds
+Type      : ssh_bruteforce
+Severity  : low
+IP        : ::1
+Attempts  : 5
+Window    : 60 seconds
 First Seen: 2026-03-09 01:39:34
 Last Seen : 2026-03-09 01:39:56
+----------------------------------------
+
 🚨 ALERT DETECTED
-Alert ID : b4ec594d-7633-4aa7-96f6-b2f97fbc6ad3
+Alert ID  : b4ec594d-7633-4aa7-96f6-b2f97fbc6ad3
 Alert Time: 2026-03-09 01:40:21
-Type : ssh_bruteforce
-Severity : medium
-IP : ::1
-Attempts : 8
-Window : 60 seconds
+Type      : ssh_bruteforce
+Severity  : medium
+IP        : ::1
+Attempts  : 8
+Window    : 60 seconds
 First Seen: 2026-03-09 01:39:34
 Last Seen : 2026-03-09 01:40:21
-
-
-
+----------------------------------------
 ```
-
 ---
 
 ## 🎯 SOC Skills Demonstrated

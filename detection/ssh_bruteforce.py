@@ -1,56 +1,90 @@
-from collector.journal_reader import stream_ssh_logs
-from parser.ssh_parser import parse_ssh_failed
-from detection.ssh_bruteforce import detect_bruteforce
-from datetime import datetime, timezone
-from logo.logo import secure_mind_team_format
-import uuid
+from collections import defaultdict
+from datetime import datetime, timedelta
+
+# =========================
+# In-Memory Storage
+# =========================
+
+# IP -> list of attempt timestamps
+FAILED_ATTEMPTS = defaultdict(list)
+
+# IP -> last alerted severity
+LAST_SEVERITY = {}
+
+# =========================
+# Detection Configuration
+# =========================
+
+WINDOW_SECONDS = 60  # Time Window
+
+LOW_THRESHOLD = 5
+MEDIUM_THRESHOLD = 8
+HIGH_THRESHOLD = 11
+
+# =========================
+# Severity Logic
+# =========================
+
+def calculate_severity(attempts: int):
+    """
+    Determine severity level based on number of attempts.
+    """
+    if attempts >= HIGH_THRESHOLD:
+        return "high"
+    elif attempts >= MEDIUM_THRESHOLD:
+        return "medium"
+    elif attempts >= LOW_THRESHOLD:
+        return "low"
+    return None
 
 
-def to_local(utc_iso: str) -> str:
-    dt = datetime.fromisoformat(utc_iso)
-    dt = dt.replace(tzinfo=timezone.utc)
-    local_dt = dt.astimezone()
-    return local_dt.strftime("%Y-%m-%d %H:%M:%S")
+# =========================
+# Detection Logic
+# =========================
 
+def detect_bruteforce(event: dict):
+    """
+    Detect SSH brute-force attacks using failed login events.
 
-def main():
-    secure_mind_team_format()
-    print("[*] SSH SOC Detector is running...")
+    Alert is generated only when severity level changes.
+    """
 
-    for line in stream_ssh_logs():
+    ip = event["actor"]["ip"]
+    event_time = datetime.fromisoformat(event["timestamp"])
 
-        # Parse log line
-        event = parse_ssh_failed(line)
-        if not event:
-            continue
+    # Add current attempt
+    FAILED_ATTEMPTS[ip].append(event_time)
 
-        # Run detection
-        alert = detect_bruteforce(event)
+    # Remove attempts outside time window
+    window_start = event_time - timedelta(seconds=WINDOW_SECONDS)
+    FAILED_ATTEMPTS[ip] = [
+        t for t in FAILED_ATTEMPTS[ip]
+        if t >= window_start
+    ]
 
-        # Generate alert
-        if alert:
-            alert_id = str(uuid.uuid4())
-            alert_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Calculate attempts and severity
+    attempts = len(FAILED_ATTEMPTS[ip])
+    severity = calculate_severity(attempts)
 
-            # Save alert to file
-            with open("alerts.log", "a", encoding="utf-8") as f:
-                f.write(
-                    f"{alert_id} | {alert_time} | {alert['alert_type']} | "
-                    f"{alert['severity']} | {alert['ip']} | {alert['attempts']} | "
-                    f"{alert['first_seen']} | {alert['last_seen']}\n"
-                )
+    # Reset severity state if activity drops below threshold
+    if not severity:
+        LAST_SEVERITY.pop(ip, None)
+        return None
 
-            print("\n🚨 ALERT DETECTED")
-            print(f"Alert ID  : {alert_id}")
-            print(f"Alert Time: {alert_time}")
-            print(f"Type      : {alert['alert_type']}")
-            print(f"Severity  : {alert['severity']}")
-            print(f"IP        : {alert['ip']}")
-            print(f"Attempts  : {alert['attempts']}")
-            print(f"First Seen: {to_local(alert['first_seen'])}")
-            print(f"Last Seen : {to_local(alert['last_seen'])}")
-            print("-" * 40)
+    # Prevent duplicate alerts for same severity
+    if LAST_SEVERITY.get(ip) == severity:
+        return None
 
+    # Update last severity
+    LAST_SEVERITY[ip] = severity
 
-if __name__ == "__main__":
-    main()
+    # Generate alert
+    return {
+        "alert_type": "ssh_bruteforce",
+        "severity": severity,
+        "ip": ip,
+        "attempts": attempts,
+        "time_window_seconds": WINDOW_SECONDS,
+        "first_seen": FAILED_ATTEMPTS[ip][0].isoformat(),
+        "last_seen": FAILED_ATTEMPTS[ip][-1].isoformat()
+    }

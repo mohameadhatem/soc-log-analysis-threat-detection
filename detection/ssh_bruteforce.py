@@ -1,88 +1,56 @@
-from collections import defaultdict
-from datetime import datetime, timedelta
+from collector.journal_reader import stream_ssh_logs
+from parser.ssh_parser import parse_ssh_failed
+from detection.ssh_bruteforce import detect_bruteforce
+from datetime import datetime, timezone
+from logo.logo import secure_mind_team_format
+import uuid
 
-# =========================
-# In-Memory Storage
-# =========================
 
-# IP -> list of attempt timestamps
-FAILED_ATTEMPTS = defaultdict(list)
+def to_local(utc_iso: str) -> str:
+    dt = datetime.fromisoformat(utc_iso)
+    dt = dt.replace(tzinfo=timezone.utc)
+    local_dt = dt.astimezone()
+    return local_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-# IP -> last alerted severity
-LAST_SEVERITY = {}
 
-# =========================
-# Detection Configuration
-# =========================
+def main():
+    secure_mind_team_format()
+    print("[*] SSH SOC Detector is running...")
 
-WINDOW_SECONDS = 60  # Time Window (نافذة زمنية)
+    for line in stream_ssh_logs():
 
-LOW_THRESHOLD = 5
-MEDIUM_THRESHOLD = 8
-HIGH_THRESHOLD = 11
+        # Parse log line
+        event = parse_ssh_failed(line)
+        if not event:
+            continue
 
-# =========================
-# Severity Logic
-# =========================
+        # Run detection
+        alert = detect_bruteforce(event)
 
-def calculate_severity(attempts: int):
-    """
-    Determine severity level based on number of attempts.
-    """
-    if attempts >= HIGH_THRESHOLD:
-        return "high"
-    elif attempts >= MEDIUM_THRESHOLD:
-        return "medium"
-    elif attempts >= LOW_THRESHOLD:
-        return "low"
-    return None
+        # Generate alert
+        if alert:
+            alert_id = str(uuid.uuid4())
+            alert_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-# =========================
-# Detection Logic
-# =========================
+            # Save alert to file
+            with open("alerts.log", "a", encoding="utf-8") as f:
+                f.write(
+                    f"{alert_id} | {alert_time} | {alert['alert_type']} | "
+                    f"{alert['severity']} | {alert['ip']} | {alert['attempts']} | "
+                    f"{alert['first_seen']} | {alert['last_seen']}\n"
+                )
 
-def detect_bruteforce(event: dict):
-    """
-    Detect SSH brute-force attacks using failed login events.
+            print("\n🚨 ALERT DETECTED")
+            print(f"Alert ID  : {alert_id}")
+            print(f"Alert Time: {alert_time}")
+            print(f"Type      : {alert['alert_type']}")
+            print(f"Severity  : {alert['severity']}")
+            print(f"IP        : {alert['ip']}")
+            print(f"Attempts  : {alert['attempts']}")
+            print(f"First Seen: {to_local(alert['first_seen'])}")
+            print(f"Last Seen : {to_local(alert['last_seen'])}")
+            print("-" * 40)
 
-    Alert is generated ONLY when severity level changes (escalation).
-    """
 
-    ip = event["actor"]["ip"]
-    event_time = datetime.fromisoformat(event["timestamp"])
-
-    # Add current attempt
-    FAILED_ATTEMPTS[ip].append(event_time)
-
-    # Remove attempts outside time window
-    window_start = event_time - timedelta(seconds=WINDOW_SECONDS)
-    FAILED_ATTEMPTS[ip] = [
-        t for t in FAILED_ATTEMPTS[ip]
-        if t >= window_start
-    ]
-
-    # Calculate attempts & severity
-    attempts = len(FAILED_ATTEMPTS[ip])
-    severity = calculate_severity(attempts)
-
-    # No severity → no alert
-    if not severity:
-        return None
-
-    # Prevent duplicate alerts for same severity
-    if LAST_SEVERITY.get(ip) == severity:
-        return None
-
-    # Update last severity
-    LAST_SEVERITY[ip] = severity
-
-    # Generate alert
-    return {
-        "alert_type": "ssh_bruteforce",
-        "severity": severity,
-        "ip": ip,
-        "attempts": attempts,
-        "time_window_seconds": WINDOW_SECONDS,
-        "first_seen": FAILED_ATTEMPTS[ip][0].isoformat(),
-        "last_seen": FAILED_ATTEMPTS[ip][-1].isoformat()
-    }
+if __name__ == "__main__":
+    main()

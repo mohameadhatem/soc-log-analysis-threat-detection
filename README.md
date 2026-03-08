@@ -57,7 +57,7 @@ soc-log-analysis-threat-detection/
 │   └── ssh_parser.py          # SSH failed-login parser
 │
 ├── detection/
-│   └── bruteforce.py          # Brute-force detection logic
+│   └── ssh_bruteforce.py          # Brute-force detection logic
 │
 ├── main.py                    # Pipeline orchestrator
 └── README.md

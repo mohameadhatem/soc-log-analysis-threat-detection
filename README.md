@@ -31,59 +31,63 @@ The project also builds a foundation for understanding:
 
 ## 🧱 Project Architecture
 
+```
 System Logs (journalctl)
-  │
-  ▼
+        │
+        ▼
 Log Collector
-  │
-  ▼
+        │
+        ▼
 Log Parser
-  │
-  ▼
+        │
+        ▼
 Detection Engine
-  │
-  ▼
+        │
+        ▼
 SOC Alert
+```
 
 ### Components
 
 **Collector**
 
-* Streams SSH authentication logs in real time using `journalctl`.
+* Streams SSH authentication logs in real time using `journalctl`
 
 **Parser**
 
-* Converts raw log messages into structured security events.
+* Converts raw log messages into structured security events
 
 **Detection Engine**
 
-* Correlates authentication failures and detects brute-force behavior.
+* Correlates authentication failures and detects brute-force behavior
 
 **Main**
 
-* Orchestrates the full SOC detection pipeline.
+* Orchestrates the full SOC detection pipeline
 
 ---
 
 ## 📂 Project Structure
 
+```
 soc-log-analysis-threat-detection/
-
+│
 ├── collector/
-│  └── journal_reader.py  # Live SSH log collection
-
+│   └── journal_reader.py      # Live SSH log collection
+│
 ├── parser/
-│  └── ssh_parser.py    # SSH failed-login parser
-
+│   └── ssh_parser.py          # SSH failed-login parser
+│
 ├── detection/
-│  └── ssh_bruteforce.py # Brute-force detection logic
-
+│   └── ssh_bruteforce.py      # Brute-force detection logic
+│
 ├── logo/
-│  └── logo.py      # Terminal banner
-
-├── main.py        # Detection pipeline orchestrator
-
+│   └── logo.py                # Terminal banner
+│
+├── main.py                    # Detection pipeline orchestrator
+│
 └── README.md
+```
 
 ---
 
@@ -100,32 +104,36 @@ soc-log-analysis-threat-detection/
 
 Raw SSH log example:
 
+```
 Failed password for invalid user test from 10.0.0.5 port 4444 ssh2
+```
 
 Converted into a **structured security event**:
 
+```json
 {
-"event_id": "uuid",
-"timestamp": "2026-01-16T04:23:58",
-"source": {
-"type": "linux",
-"service": "ssh"
-},
-"event": {
-"category": "authentication",
-"action": "login_failed",
-"outcome": "failure"
-},
-"actor": {
-"user": "test",
-"ip": "10.0.0.5"
-},
-"network": {
-"src_ip": "10.0.0.5",
-"src_port": 4444
-},
-"raw": "Failed password for invalid user test from 10.0.0.5 port 4444 ssh2"
+  "event_id": "uuid",
+  "timestamp": "2026-01-16T04:23:58",
+  "source": {
+    "type": "linux",
+    "service": "ssh"
+  },
+  "event": {
+    "category": "authentication",
+    "action": "login_failed",
+    "outcome": "failure"
+  },
+  "actor": {
+    "user": "test",
+    "ip": "10.0.0.5"
+  },
+  "network": {
+    "src_ip": "10.0.0.5",
+    "src_port": 4444
+  },
+  "raw": "Failed password for invalid user test from 10.0.0.5 port 4444 ssh2"
 }
+```
 
 This structure is inspired by **normalized SIEM event models** used in enterprise security platforms.
 
@@ -159,9 +167,9 @@ Failed attempts outside the window are automatically removed to ensure detection
 
 ### SOC Rationale
 
-Low → Possible user mistake or early probing activity
-Medium → Suspicious automated authentication attempts
-High → Confirmed brute-force attack behavior
+* **Low** → Possible user mistake or early probing activity
+* **Medium** → Suspicious automated authentication attempts
+* **High** → Confirmed brute-force attack behavior
 
 ---
 
@@ -186,7 +194,9 @@ This simulates **real SOC alert management practices**.
 
 Run the detection pipeline:
 
+```bash
 sudo python3 main.py
+```
 
 `sudo` is required because the tool reads system logs from **journalctl**.
 
@@ -196,17 +206,21 @@ sudo python3 main.py
 
 Generate failed SSH login attempts:
 
+```bash
 ssh test@localhost
+```
 
 After multiple failed attempts, the system generates an alert:
 
+```
 🚨 ALERT DETECTED
-Type   : ssh_bruteforce
-Severity : medium
-IP    : 127.0.0.1
-Attempts : 8
+Type      : ssh_bruteforce
+Severity  : medium
+IP        : 127.0.0.1
+Attempts  : 8
 First Seen: 2026-03-09 01:01:52
 Last Seen : 2026-03-09 01:02:39
+```
 
 ---
 
@@ -216,7 +230,9 @@ Example output produced during a simulated brute-force test in a lab environment
 
 Add a screenshot in the repository:
 
+```
 screenshots/detection.png
+```
 
 ---
 
@@ -250,7 +266,9 @@ Possible enhancements for the project:
 
 The architecture implemented in this project mirrors the internal workflow of many **SIEM and detection systems**:
 
+```
 Log Ingestion → Parsing → Event Normalization → Detection → Alerting
+```
 
 This demonstrates practical understanding of **SOC monitoring pipelines and detection engineering concepts**.
 

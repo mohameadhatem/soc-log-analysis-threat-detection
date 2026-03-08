@@ -1,7 +1,6 @@
 # 🔐 SOC Log Analysis & Threat Detection
 
 ## 📌 Project Overview
-
 A practical SOC learning project focused on **log analysis**, **threat detection**, and **security event modeling** using real Linux system logs.
 
 This project simulates how **Security Operations Center (SOC)** tools monitor authentication logs to detect malicious activities such as **SSH brute-force attacks**.

@@ -1,59 +1,57 @@
-try:
-    from collector.journal_reader import stream_ssh_logs
-    from parser.ssh_parser import parse_ssh_failed
-    from detection.ssh_bruteforce import detect_bruteforce
-    from datetime import datetime, timezone
-    from logo.logo import secure_mind_team_format
-    import uuid
-except Exception as a:
-    print(a)
+from collector.journal_reader import stream_ssh_logs
+from parser.ssh_parser import parse_ssh_failed
+from detection.ssh_bruteforce import detect_bruteforce
+from datetime import datetime, timezone
+from logo.logo import secure_mind_team_format
+import uuid
 
-try:
-    def to_local(utc_iso: str) -> str:
-        dt = datetime.fromisoformat(utc_iso)
-        dt = dt.replace(tzinfo=timezone.utc)
-        local_dt = dt.astimezone()
-        return local_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-    def main():
-        secure_mind_team_format()
-        print("[*] SSH SOC Detector is running...")
+def to_local(utc_iso: str) -> str:
+    dt = datetime.fromisoformat(utc_iso)
+    dt = dt.replace(tzinfo=timezone.utc)
+    local_dt = dt.astimezone()
+    return local_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-        for line in stream_ssh_logs():
-            # Parsing
-            event = parse_ssh_failed(line)
-            if not event:
-                continue
 
-            # Detection
-            alert = detect_bruteforce(event)
+def main():
+    secure_mind_team_format()
+    print("[*] SSH SOC Detector is running...")
 
-            # Alert
-            if alert:
-                alert_id = str(uuid.uuid4())
-                alert_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for line in stream_ssh_logs():
 
-                # Save alert to file
-                with open("alerts.log", "a") as f:
-                    f.write(
-                        f"{alert_id} | {alert_time} | {alert['alert_type']} | "
-                        f"{alert['severity']} | {alert['ip']} | {alert['attempts']} | "
-                        f"{alert['first_seen']} | {alert['last_seen']}\n"
-                    )
+        # Parse log line
+        event = parse_ssh_failed(line)
+        if not event:
+            continue
 
-                print("\n🚨 ALERT DETECTED")
-                print(f"Alert ID  : {alert_id}")
-                print(f"Alert Time: {alert_time}")
-                print(f"Type      : {alert['alert_type']}")
-                print(f"Severity  : {alert['severity']}")
-                print(f"IP        : {alert['ip']}")
-                print(f"Attempts  : {alert['attempts']}")
-                print(f"First Seen: {to_local(alert['first_seen'])}")
-                print(f"Last Seen : {to_local(alert['last_seen'])}")
-                print("-" * 40)
+        # Run detection
+        alert = detect_bruteforce(event)
 
-    if __name__ == "__main__":
-        main()
+        # Generate alert
+        if alert:
+            alert_id = str(uuid.uuid4())
+            alert_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-except Exception as a:
-    print(a)
+            # Save alert to file
+            with open("alerts.log", "a", encoding="utf-8") as f:
+                f.write(
+                    f"{alert_id} | {alert_time} | {alert['alert_type']} | "
+                    f"{alert['severity']} | {alert['ip']} | {alert['attempts']} | "
+                    f"{alert['first_seen']} | {alert['last_seen']}\n"
+                )
+
+            print("\n🚨 ALERT DETECTED")
+            print(f"Alert ID  : {alert_id}")
+            print(f"Alert Time: {alert_time}")
+            print(f"Type      : {alert['alert_type']}")
+            print(f"Severity  : {alert['severity']}")
+            print(f"IP        : {alert['ip']}")
+            print(f"Attempts  : {alert['attempts']}")
+            print(f"Window    : {alert['time_window_seconds']} seconds")
+            print(f"First Seen: {to_local(alert['first_seen'])}")
+            print(f"Last Seen : {to_local(alert['last_seen'])}")
+            print("-" * 40)
+
+
+if __name__ == "__main__":
+    main()
